@@ -432,7 +432,7 @@ Provisionando MVs com o código
 2. Atualize o `npm` instale o PM2 e a configuração `logrotate` e inicie no boot
 
    ```console
-   npm i -g npm@6
+   npm i -g npm@8
    npm i -g pm2
    pm2 install pm2-logrotate
    pm2 startup
@@ -794,7 +794,7 @@ nvm ls
 Instale a versão LTS Node.js mais recente e reinstale qualquer pacote global
 
 ```console
-nvm install 'lts/*' --reinstall-packages-from=default
+nvm install --lts --reinstall-packages-from=default
 ```
 
 Verifique os pacotes instalados
@@ -803,10 +803,10 @@ Verifique os pacotes instalados
 npm ls -g --depth=0
 ```
 
-Crie um alias da versão `default`  do Node.js para a versão current LTS
+Alias the `default` Node.js version to the current LTS (pinned to latest major version)
 
 ```console
-nvm alias default lts/*
+nvm alias default 16
 ```
 
 (Opcional) Desinstale versões antigas
@@ -815,9 +815,23 @@ nvm alias default lts/*
 nvm uninstall <version>
 ```
 
-> [!WARNING] Se estiver usando PM2 para os processos você também vai precisar executar as aplicações e salvar a lista de processos para restaurações automáticas quando reiniciar.
+> [!ATTENTION] For client applications, the shell script can't be resurrected between Node.js versions with `pm2 resurrect`. Deploy processes from scratch instead. This should become nicer when we move to a docker based setup.
+> 
+> If using PM2 for processes you would also need to bring up the applications and save the process list for automatic recovery on restarts.
 
-Comandos rápidos PM2 para listar, reviver processos salvos, etc.
+Get the uninstall instructions/commands with the `unstartup` command and use the output to remove the systemctl services
+
+```console
+pm2 unstartup
+```
+
+Get the install instructions/commands with the `startup` command and use the output to add the systemctl services
+
+```console
+pm2 startup
+```
+
+Quick commands for PM2 to list, resurrect saved processes, etc.
 
 ```console
 pm2 ls
@@ -835,23 +849,21 @@ pm2 save
 pm2 logs
 ```
 
-> [!ATTENTION] Para aplicações de client, o script de shell não pode ser revivido entre as versões do Node.js com `pm2 resurrect`.  Implante processos de zero ao invés disso. Isso deve melhorar quando mudarmos para uma configuração baseada em docker.
-
 ## Instalando e atualizando agentes do Azure Pipeline
 
-Veja: https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/v2-linux?view=azure-devops e siga as instruções para parar, remover e reinstalar os agentes. Em resumo, você pode seguir as etapas listadas aqui.
+See: https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/v2-linux?view=azure-devops and follow the instructions to stop, remove and reinstall agents. Broadly you can follow the steps listed here.
 
-Você vai precisar de um PAT, que você pode pegar nesse link: https://dev.azure.com/freeCodeCamp-org/_usersSettings/tokens
+You would need a PAT, that you can grab from here: https://dev.azure.com/freeCodeCamp-org/_usersSettings/tokens
 
 ### Instalando agentes em alvos de implantação
 
-Vá para [Azure Devops](https://dev.azure.com/freeCodeCamp-org) e registre o agente do zero nos [grupos de implantação](https://dev.azure.com/freeCodeCamp-org/freeCodeCamp/_machinegroup) necessários.
+Navigate to [Azure Devops](https://dev.azure.com/freeCodeCamp-org) and register the agent from scratch in the requisite [deployment groups](https://dev.azure.com/freeCodeCamp-org/freeCodeCamp/_machinegroup).
 
-> [!NOTE] Você deve executar os scripts no diretório principal e garantir que nenhum outro diretório `azagent` existe.
+> [!NOTE] You should run the scripts in the home directory, and make sure no other `azagent` directory exists.
 
 ### Atualizando agentes
 
-Atualmente, atualizar os agentes requer que sejam removidos e reconfigurados. Isso é necessário para que eles tenham os valores do `PATH` e de outras variáveis de ambiente corretos. Precisamos fazer isso, por exemplo, para atualizar Node.js em nossas MVs de implantação.
+Currently updating agents requires them to be removed and reconfigured. This is required for them to correctly pick up `PATH` values and other system environment variables. We need to do this for instance updating Node.js on our deployment target VMs.
 
 1. Vá e verifique o estado do serviço
 
@@ -885,11 +897,11 @@ Atualmente, atualizar os agentes requer que sejam removidos e reconfigurados. Is
    rm -rf ~/azagent
    ```
 
-Uma vez que você completar as etapas acima, você pode repetir as mesmas etapas na instalação do agente.
+Once You have completed the steps above, you can repeat the same steps as installing the agent.
 
 # Manual de Vôo - Disparo de e-mail
 
-Nós usamos [uma ferramenta de linha de comando](https://github.com/freecodecamp/sendgrid-email-blast) para enviar a newsletter semanal. Para começar o processo:
+We use [a CLI tool](https://github.com/freecodecamp/sendgrid-email-blast) to send out the weekly newsletter. To spin this up and begin the process:
 
 1. Se inscreva na DigitalOcean, e inicie o use de novas droplets sob o projeto `Sendgrid`. Use uma snapshot da Sendgrid no Ubuntu com a data mais recente. Isso vem pré-instalado com a ferramenta da linha de comando para pegar e-mails da base de dados. Com o volume atual, três droplets são suficientes para enviar emails de forma oportuna.
 
@@ -918,18 +930,18 @@ Nós usamos [uma ferramenta de linha de comando](https://github.com/freecodecamp
 
 7. Quando o disparo de email estiver completo, verifique se nenhum e-mail falhou antes de destruir os droplets.
 
-# Flight Manual - Adding news instances for new languages
+# Manual de Voo - adicionando instâncias de notícias aos novos idiomas
 
 ### Alterações nos temas
 
-Usamos um [tema personalizado](https://github.com/freeCodeCamp/news-theme) para nossa publicação de notícias. Adicionar as seguintes alterações ao tema permite a inserção de novos idiomas.
+We use a custom [theme](https://github.com/freeCodeCamp/news-theme) for our news publication. Adding the following changes to the theme enables the addition of new languages.
 
-1. Include an `else if` statement for the new [ISO language code](https://www.loc.gov/standards/iso639-2/php/code_list.php) in [`setup-locale.js`](https://github.com/freeCodeCamp/news-theme/blob/main/assets/config/setup-locale.js)
-2. Create an initial config folder by duplicating the [`assets/config/en`](https://github.com/freeCodeCamp/news-theme/tree/main/assets/config/en) folder and changing its name to the new language code. (`en` —> `es` for Spanish)
-3. Inside the new language folder, change the variable names in `main.js` and `footer.js` to the relevant language short code (`enMain` —> `esMain` for Spanish)
-4. Duplicate the [`locales/en.json`](https://github.com/freeCodeCamp/news-theme/blob/main/locales/en.json) and rename it to the new language code.
-5. In [`partials/i18n.hbs`](https://github.com/freeCodeCamp/news-theme/blob/main/partials/i18n.hbs), add scripts for the newly created config files.
-6. Add the related language `day.js` script from [cdnjs](https://cdnjs.com/libraries/dayjs/1.10.4) to the [freeCodeCamp CDN](https://github.com/freeCodeCamp/cdn/tree/main/build/news-assets/dayjs/1.10.4/locale)
+1. Inclua a instrução `else if` para o novo [código de idioma ISO](https://www.loc.gov/standards/iso639-2/php/code_list.php) em [`setup-local.js`](https://github.com/freeCodeCamp/news-theme/blob/main/assets/config/setup-locale.js)
+2. Crie uma pasta inicial de configuração duplicando a pasta [`assets/config/en`](https://github.com/freeCodeCamp/news-theme/tree/main/assets/config/en) e alterando seu nome para o novo código de idioma. (`en` —> `es` para espanhol)
+3. Dentro da pasta do novo idioma, altere os nomes das variáveis no `main.js` e no `footer.js` para o código curto de idioma relevante (`enMain` —> `esMain` para o espanhol)
+4. Duplique o [`locales/en.json`](https://github.com/freeCodeCamp/news-theme/blob/main/locales/en.json) e renomeie-o para o código do novo idioma.
+5. Em [`partials/i18n.hbs`](https://github.com/freeCodeCamp/news-theme/blob/main/partials/i18n.hbs), adicione scripts para arquivos de configuração recém-criados.
+6. Adicionar o script `day.js` do idioma relacionado [cdnjs](https://cdnjs.com/libraries/dayjs/1.10.4) ao [CDN do freeCodeCamp](https://github.com/freeCodeCamp/cdn/tree/main/build/news-assets/dayjs/1.10.4/locale)
 
 ### Alterações do painel do Ghost
 
